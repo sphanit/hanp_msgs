@@ -13,7 +13,7 @@ endif()
 
 
 cmake_minimum_required(VERSION 2.8.3)
-project(human_aware_layers_msgs)
+project(hanp_layer_msgs)
 
 find_package(catkin REQUIRED COMPONENTS
   message_generation
@@ -61,7 +61,7 @@ catkin_package(
 #   INCLUDE_DIRS
 #     include
 #  LIBRARIES
-#    human_aware_layers_msgs
+#    hanp_layer_msgs
   CATKIN_DEPENDS
     message_runtime
     geometry_msgs
@@ -79,23 +79,23 @@ catkin_package(
 # )
 
 ## declare a cpp library
-# add_library(human_aware_layers_msgs
-#   src/${PROJECT_NAME}/human_aware_layers_msgs.cpp
+# add_library(hanp_layer_msgs
+#   src/${PROJECT_NAME}/hanp_layer_msgs.cpp
 # )
 
 ## declare a cpp executable
-# add_executable(human_aware_layers_msgs_node
-#   src/human_aware_layers_msgs_node.cpp
+# add_executable(hanp_layer_msgs_node
+#   src/hanp_layer_msgs_node.cpp
 # )
 
 ## cmake target dependencies of the executable/library
-# add_dependencies(human_aware_layers_msgs_node human_aware_layers_msgs_generate_messages_cpp)
+# add_dependencies(hanp_layer_msgs_node hanp_layer_msgs_generate_messages_cpp)
 
 ## build configure headers
-# add_dependencies(human_aware_layers_msgs_node ${PROJECT_NAME}_gencfg)
+# add_dependencies(hanp_layer_msgs_node ${PROJECT_NAME}_gencfg)
 
 ## libraries to link a library or executable target against
-# target_link_libraries(human_aware_layers_msgs_node
+# target_link_libraries(hanp_layer_msgs_node
 #   ${catkin_LIBRARIES}
 # )
 
@@ -110,7 +110,7 @@ catkin_package(
 # )
 
 ## executables and/or libraries for installation
-# install(TARGETS human_aware_layers_msgs human_aware_layers_msgs_node
+# install(TARGETS hanp_layer_msgs hanp_layer_msgs_node
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -139,7 +139,7 @@ catkin_package(
 ## testing ##
 
 ## add catch based cpp test target
-# catkin_add_catchtest(${PROJECT_NAME}-test test/test_human_aware_layers_msgs.cpp)
+# catkin_add_catchtest(${PROJECT_NAME}-test test/test_hanp_layer_msgs.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
