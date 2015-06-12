@@ -1,18 +1,18 @@
 <?xml version="1.0"?>
 <package>
-  <name>hanp_layer_msgs</name>
+  <name>hanp_msgs</name>
 
-  <version>0.0.1</version>
+  <version>0.0.2</version>
 
   <description>person detection message definitions (for human aware navigation planning)</description>
 
   <!--  <author email="harmish@laas.fr">harmish khambhaita</author>  -->
   <maintainer email="harmish@laas.fr">harmish khambhaita</maintainer>
 
-
   <license>BSD</license>
 
-  <!--  <url website >http://wiki.ors.org/hanp_layer_msgs</url>  -->
+  <url type="website">https://github.com/harmishhk/hanp_msgs</url>
+  <url type="bugtracker">https://github.com/harmishhk/hanp_msgs/issues</url>
 
   <buildtool_depend>catkin</buildtool_depend>
 

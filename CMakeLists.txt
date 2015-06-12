@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(hanp_layer_msgs)
+project(hanp_msgs)
 
 find_package(catkin REQUIRED COMPONENTS
   message_generation
