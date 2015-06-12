@@ -6,9 +6,9 @@
 
   <description>person detection message definitions (for human aware navigation planning)</description>
 
+  <!--  <author email="harmish@laas.fr">harmish khambhaita</author>  -->
   <maintainer email="harmish@laas.fr">harmish khambhaita</maintainer>
 
-  <!--  <author email="author_email">author_name</author>  -->
 
   <license>BSD</license>
 
@@ -22,13 +22,4 @@
   <run_depend>message_runtime</run_depend>
   <run_depend>geometry_msgs</run_depend>
 
-  <!--  <test_depend>some_pkg</test_depend>  -->
-
-  <!--  <conflict>some_pkg</conflict>  -->
-
-  <!--  <replace>some_pkg</replace>  -->
-
-  <export>
-    <!-- <metapackage/> -->
-  </export>
 </package>
