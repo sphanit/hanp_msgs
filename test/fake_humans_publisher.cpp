@@ -27,15 +27,17 @@
  *                                  Harmish Khambhaita on Fri Jun 12 2015
  */
 
-#define START_POSE_X 0.0
-#define START_POSE_Y 0.0
-#define END_POSE_X 4.0
-#define END_POSE_Y 4.0
-#define LOOP_RATE 10
+#define START_POSE_X 1.0
+#define START_POSE_Y 1.0
+#define END_POSE_X 2.0
+#define END_POSE_Y 2.0
+#define LOOP_RATE 10.0
+#define POSE_UPDATE_RATE 20.0
 
 #include <ros/ros.h>
 #include <hanp_msgs/TrackedHumans.h>
 #include <visualization_msgs/Marker.h>
+#include <tf/transform_listener.h>
 
 #include <math.h>
 
@@ -46,12 +48,17 @@ int main(int argc, char **argv)
     // ros variables
     ros::NodeHandle nh("~");
     ros::Publisher humans_pub, vis_pub;
+    double start_pose_x, start_pose_y, end_pose_x, end_pose_y;
 
     // variables
     bool publish_markers = false;
 
     // get parameters from server
     nh.param<bool>("publish_markers", publish_markers, false);
+    nh.param<double>("start_pose_x", start_pose_x, START_POSE_X);
+    nh.param<double>("start_pose_y", start_pose_y, START_POSE_Y);
+    nh.param<double>("end_pose_x", end_pose_x, END_POSE_X);
+    nh.param<double>("end_pose_y", end_pose_y, END_POSE_X);
 
     humans_pub = nh.advertise<hanp_msgs::TrackedHumans>("humans", 1);
 
@@ -66,19 +73,21 @@ int main(int argc, char **argv)
     // generate fake humans and markers
     hanp_msgs::TrackedHuman human;
     visualization_msgs::Marker human_marker;
-    geometry_msgs::Pose start_pose, end_pose;
+    geometry_msgs::Pose start_pose, end_pose, last_pose;
 
-    start_pose.position.x = START_POSE_X;
-    start_pose.position.y = START_POSE_Y;
+    start_pose.position.x = start_pose_x;
+    start_pose.position.y = start_pose_y;
     start_pose.position.z = 0.0;
     start_pose.orientation.x = 0.0;
     start_pose.orientation.y = 0.0;
     start_pose.orientation.z = 0.0;
     start_pose.orientation.w = 1.0;
 
+    last_pose = start_pose;
+
     end_pose = start_pose;
-    end_pose.position.x = END_POSE_X;
-    end_pose.position.y = END_POSE_Y;
+    end_pose.position.x = end_pose_x;
+    end_pose.position.y = end_pose_y;
 
     double diff_x = end_pose.position.x - start_pose.position.x;
     double diff_y = end_pose.position.y - start_pose.position.y;
@@ -115,6 +124,14 @@ int main(int argc, char **argv)
         human.pose.pose.position.x = start_pose.position.x + diff_x * interpolation;
         human.pose.pose.position.y = start_pose.position.y + diff_y * interpolation;
 
+        double dx = human.pose.pose.position.x - last_pose.position.x;
+        double dy = human.pose.pose.position.y - last_pose.position.y;
+        human.pose.pose.orientation = tf::createQuaternionMsgFromYaw(atan2(dy, dx));
+
+        human.twist.twist.linear.x = hypot(dx, dy) / (1.0/LOOP_RATE);
+        human.twist.twist.angular.z = (tf::getYaw(human.pose.pose.orientation) -
+            tf::getYaw(last_pose.orientation)) / (1.0/LOOP_RATE);
+
         // modify messages to publish
         humans.header.stamp = ros::Time::now();
         humans.tracks.clear();
@@ -127,10 +144,12 @@ int main(int argc, char **argv)
             vis_pub.publish(human_marker);
         }
 
+        last_pose = human.pose.pose;
+
         ros::spinOnce();
 
         // reduce movement by 10th of the loop rate
-        angle += M_PI/LOOP_RATE/10;
+        angle += M_PI/LOOP_RATE/POSE_UPDATE_RATE;
         loop_rate.sleep();
     }
 

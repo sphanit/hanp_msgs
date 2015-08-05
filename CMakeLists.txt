@@ -5,6 +5,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   message_generation
   geometry_msgs
+  tf
   visualization_msgs
 )
 
@@ -28,6 +29,7 @@ catkin_package(
     roscpp
     message_runtime
     geometry_msgs
+    tf
     visualization_msgs
 )
 
@@ -41,6 +43,9 @@ include_directories(
 )
 add_executable(fake_humans_publisher
   test/fake_humans_publisher.cpp
+)
+add_dependencies(fake_humans_publisher
+  ${PROJECT_NAME}_generate_messages_cpp
 )
 target_link_libraries(fake_humans_publisher
   ${catkin_LIBRARIES}
