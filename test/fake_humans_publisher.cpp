@@ -128,7 +128,8 @@ int main(int argc, char **argv)
         double dy = human.pose.pose.position.y - last_pose.position.y;
         human.pose.pose.orientation = tf::createQuaternionMsgFromYaw(atan2(dy, dx));
 
-        human.twist.twist.linear.x = hypot(dx, dy) / (1.0/LOOP_RATE);
+        human.twist.twist.linear.x = dx / (1.0/LOOP_RATE);
+        human.twist.twist.linear.y = dy / (1.0/LOOP_RATE);
         human.twist.twist.angular.z = (tf::getYaw(human.pose.pose.orientation) -
             tf::getYaw(last_pose.orientation)) / (1.0/LOOP_RATE);
 
