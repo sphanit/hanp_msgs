@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 add_message_files( DIRECTORY msg
   FILES
+    BodySegment.msg
     TrackedHuman.msg
     TrackedHumans.msg
 )
@@ -41,9 +42,11 @@ catkin_package(
 include_directories(
   ${catkin_INCLUDE_DIRS}
 )
+
 add_executable(fake_humans_publisher
   test/fake_humans_publisher.cpp
 )
+
 add_dependencies(fake_humans_publisher
   ${PROJECT_NAME}_generate_messages_cpp
 )
