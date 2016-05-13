@@ -1,4 +1,2 @@
-uint64                              track_id
-geometry_msgs/PoseWithCovariance    pose
-geometry_msgs/TwistWithCovariance   twist
-geometry_msgs/AccelWithCovariance   accel
+uint64              track_id
+BodySegment[]       segments
