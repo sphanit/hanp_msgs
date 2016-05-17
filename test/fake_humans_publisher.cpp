@@ -74,8 +74,8 @@ int main(int argc, char **argv)
     hanp_msgs::TrackedHuman human;
     hanp_msgs::BodySegment head_segment = hanp_msgs::BodySegment();
     head_segment.name = "head";
-    hanp_msgs::BodySegment body_segment = hanp_msgs::BodySegment();
-    body_segment.name = "body";
+    hanp_msgs::BodySegment torso_segment = hanp_msgs::BodySegment();
+    torso_segment.name = "torso";
 
     visualization_msgs::Marker human_marker;
     geometry_msgs::Pose start_pose, end_pose, last_pose;
@@ -99,9 +99,9 @@ int main(int argc, char **argv)
 
     human.track_id = 1;
     head_segment.pose.pose = start_pose;
-    body_segment.pose.pose = start_pose;
+    torso_segment.pose.pose = start_pose;
     human.segments.push_back(head_segment);
-    human.segments.push_back(body_segment);
+    human.segments.push_back(torso_segment);
 
     // add human to humans message to publish
     hanp_msgs::TrackedHumans humans;
