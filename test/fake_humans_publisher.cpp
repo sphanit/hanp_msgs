@@ -72,6 +72,11 @@ int main(int argc, char **argv)
 
     // generate fake humans and markers
     hanp_msgs::TrackedHuman human;
+    hanp_msgs::BodySegment head_segment = hanp_msgs::BodySegment();
+    head_segment.name = "head";
+    hanp_msgs::BodySegment torso_segment = hanp_msgs::BodySegment();
+    torso_segment.name = "torso";
+
     visualization_msgs::Marker human_marker;
     geometry_msgs::Pose start_pose, end_pose, last_pose;
 
@@ -93,7 +98,10 @@ int main(int argc, char **argv)
     double diff_y = end_pose.position.y - start_pose.position.y;
 
     human.track_id = 1;
-    human.pose.pose = start_pose;
+    head_segment.pose.pose = start_pose;
+    torso_segment.pose.pose = start_pose;
+    human.segments.push_back(head_segment);
+    human.segments.push_back(torso_segment);
 
     // add human to humans message to publish
     hanp_msgs::TrackedHumans humans;
@@ -107,7 +115,7 @@ int main(int argc, char **argv)
     human_marker.type = visualization_msgs::Marker::ARROW;
     human_marker.action = visualization_msgs::Marker::MODIFY;
     human_marker.id = human.track_id;
-    human_marker.pose = human.pose.pose;
+    human_marker.pose = human.segments[0].pose.pose;
     human_marker.scale.x = 0.5;
     human_marker.scale.y = 0.08;
     human_marker.scale.z = 0.08;
@@ -121,23 +129,23 @@ int main(int argc, char **argv)
     {
         // change human pose by simple sin-wave based interpolation
         double interpolation = (sin(angle) + 1) / 2;
-        human.pose.pose.position.x = start_pose.position.x + diff_x * interpolation;
-        human.pose.pose.position.y = start_pose.position.y + diff_y * interpolation;
+        human.segments[0].pose.pose.position.x = start_pose.position.x + diff_x * interpolation;
+        human.segments[0].pose.pose.position.y = start_pose.position.y + diff_y * interpolation;
 
-        double dx = human.pose.pose.position.x - last_pose.position.x;
-        double dy = human.pose.pose.position.y - last_pose.position.y;
-        human.pose.pose.orientation = tf::createQuaternionMsgFromYaw(atan2(dy, dx));
+        double dx = human.segments[0].pose.pose.position.x - last_pose.position.x;
+        double dy = human.segments[0].pose.pose.position.y - last_pose.position.y;
+        human.segments[0].pose.pose.orientation = tf::createQuaternionMsgFromYaw(atan2(dy, dx));
 
-        human.twist.twist.linear.x = dx / (1.0/LOOP_RATE);
-        human.twist.twist.linear.y = dy / (1.0/LOOP_RATE);
-        human.twist.twist.angular.z = (tf::getYaw(human.pose.pose.orientation) -
+        human.segments[0].twist.twist.linear.x = dx / (1.0/LOOP_RATE);
+        human.segments[0].twist.twist.linear.y = dy / (1.0/LOOP_RATE);
+        human.segments[0].twist.twist.angular.z = (tf::getYaw(human.segments[0].pose.pose.orientation) -
             tf::getYaw(last_pose.orientation)) / (1.0/LOOP_RATE);
 
         // modify messages to publish
         humans.header.stamp = ros::Time::now();
         humans.tracks.clear();
         humans.tracks.push_back(human);
-        human_marker.pose = human.pose.pose;
+        human_marker.pose = human.segments[0].pose.pose;
 
         humans_pub.publish(humans);
         if(publish_markers)
@@ -145,7 +153,7 @@ int main(int argc, char **argv)
             vis_pub.publish(human_marker);
         }
 
-        last_pose = human.pose.pose;
+        last_pose = human.segments[0].pose.pose;
 
         ros::spinOnce();
 
