@@ -1,2 +1,2 @@
 uint64              track_id
-BodySegment[]       segments
+TrackedSegment[]    segments

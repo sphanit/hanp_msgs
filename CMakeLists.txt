@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(hanp_msgs)
 
+set(CMAKE_CXX_COMPILER_ARG1 -std=c++11)
+
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   message_generation
@@ -13,7 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 add_message_files( DIRECTORY msg
   FILES
-    BodySegment.msg
+    TrackedSegment.msg
     TrackedHuman.msg
     TrackedHumans.msg
 )
@@ -42,11 +44,9 @@ catkin_package(
 include_directories(
   ${catkin_INCLUDE_DIRS}
 )
-
 add_executable(fake_humans_publisher
   test/fake_humans_publisher.cpp
 )
-
 add_dependencies(fake_humans_publisher
   ${PROJECT_NAME}_generate_messages_cpp
 )

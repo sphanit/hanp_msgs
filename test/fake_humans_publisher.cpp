@@ -33,6 +33,9 @@
 #define END_POSE_Y 2.0
 #define LOOP_RATE 10.0
 #define POSE_UPDATE_RATE 20.0
+#define SEGMENT_NAME "torso"
+#define HUMAN_ID 1
+#define HUMANS_FRAME_ID "humans_frame"
 
 #include <ros/ros.h>
 #include <hanp_msgs/TrackedHumans.h>
@@ -71,11 +74,8 @@ int main(int argc, char **argv)
     ros::Rate loop_rate(LOOP_RATE);
 
     // generate fake humans and markers
-    hanp_msgs::TrackedHuman human;
-    hanp_msgs::BodySegment head_segment = hanp_msgs::BodySegment();
-    head_segment.name = "head";
-    hanp_msgs::BodySegment torso_segment = hanp_msgs::BodySegment();
-    torso_segment.name = "torso";
+    hanp_msgs::TrackedSegment tracked_segment;
+    tracked_segment.name = SEGMENT_NAME;
 
     visualization_msgs::Marker human_marker;
     geometry_msgs::Pose start_pose, end_pose, last_pose;
@@ -97,25 +97,25 @@ int main(int argc, char **argv)
     double diff_x = end_pose.position.x - start_pose.position.x;
     double diff_y = end_pose.position.y - start_pose.position.y;
 
-    human.track_id = 1;
-    head_segment.pose.pose = start_pose;
-    torso_segment.pose.pose = start_pose;
-    human.segments.push_back(head_segment);
-    human.segments.push_back(torso_segment);
+    // add human segment to human message
+    hanp_msgs::TrackedHuman human;
+    human.track_id = HUMAN_ID;
+    tracked_segment.pose.pose = start_pose;
+    human.segments.push_back(tracked_segment);
 
     // add human to humans message to publish
-    hanp_msgs::TrackedHumans humans;
-    humans.header.stamp = ros::Time::now();
-    humans.header.frame_id = "humans_frame";
-    humans.tracks.push_back(human);
+    hanp_msgs::TrackedHumans tracks;
+    tracks.header.stamp = ros::Time::now();
+    tracks.header.frame_id = HUMANS_FRAME_ID;
+    tracks.humans.push_back(human);
 
     // add marker for the fake human for visualization
-    human_marker.header.stamp = humans.header.stamp;
-    human_marker.header.frame_id = humans.header.frame_id;
+    human_marker.header.stamp = tracks.header.stamp;
+    human_marker.header.frame_id = tracks.header.frame_id;
     human_marker.type = visualization_msgs::Marker::ARROW;
     human_marker.action = visualization_msgs::Marker::MODIFY;
     human_marker.id = human.track_id;
-    human_marker.pose = human.segments[0].pose.pose;
+    human_marker.pose = tracked_segment.pose.pose;
     human_marker.scale.x = 0.5;
     human_marker.scale.y = 0.08;
     human_marker.scale.z = 0.08;
@@ -129,31 +129,39 @@ int main(int argc, char **argv)
     {
         // change human pose by simple sin-wave based interpolation
         double interpolation = (sin(angle) + 1) / 2;
-        human.segments[0].pose.pose.position.x = start_pose.position.x + diff_x * interpolation;
-        human.segments[0].pose.pose.position.y = start_pose.position.y + diff_y * interpolation;
 
-        double dx = human.segments[0].pose.pose.position.x - last_pose.position.x;
-        double dy = human.segments[0].pose.pose.position.y - last_pose.position.y;
-        human.segments[0].pose.pose.orientation = tf::createQuaternionMsgFromYaw(atan2(dy, dx));
-
-        human.segments[0].twist.twist.linear.x = dx / (1.0/LOOP_RATE);
-        human.segments[0].twist.twist.linear.y = dy / (1.0/LOOP_RATE);
-        human.segments[0].twist.twist.angular.z = (tf::getYaw(human.segments[0].pose.pose.orientation) -
-            tf::getYaw(last_pose.orientation)) / (1.0/LOOP_RATE);
-
-        // modify messages to publish
-        humans.header.stamp = ros::Time::now();
-        humans.tracks.clear();
-        humans.tracks.push_back(human);
-        human_marker.pose = human.segments[0].pose.pose;
-
-        humans_pub.publish(humans);
-        if(publish_markers)
+        for(auto &segment : human.segments)
         {
-            vis_pub.publish(human_marker);
-        }
+            if(segment.name == SEGMENT_NAME)
+            {
+                segment.pose.pose.position.x = start_pose.position.x + diff_x * interpolation;
+                segment.pose.pose.position.y = start_pose.position.y + diff_y * interpolation;
 
-        last_pose = human.segments[0].pose.pose;
+                double dx = segment.pose.pose.position.x - last_pose.position.x;
+                double dy = segment.pose.pose.position.y - last_pose.position.y;
+                segment.pose.pose.orientation = tf::createQuaternionMsgFromYaw(atan2(dy, dx));
+
+                segment.twist.twist.linear.x = dx / (1.0/LOOP_RATE);
+                segment.twist.twist.linear.y = dy / (1.0/LOOP_RATE);
+                segment.twist.twist.angular.z = (tf::getYaw(segment.pose.pose.orientation) -
+                    tf::getYaw(last_pose.orientation)) / (1.0/LOOP_RATE);
+
+                // modify messages to publish
+                tracks.header.stamp = ros::Time::now();
+                tracks.humans.clear();
+                tracks.humans.push_back(human);
+
+                humans_pub.publish(tracks);
+
+                if(publish_markers)
+                {
+                    human_marker.pose = segment.pose.pose;
+                    vis_pub.publish(human_marker);
+                }
+
+                last_pose = segment.pose.pose;
+            }
+        }
 
         ros::spinOnce();
 
