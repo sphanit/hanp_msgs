@@ -27,19 +27,14 @@
  *                                  Harmish Khambhaita on Fri Jun 12 2015
  */
 
-#define START_POSE_X 1.0
-#define START_POSE_Y 1.0
-#define END_POSE_X 2.0
-#define END_POSE_Y 2.0
 #define LOOP_RATE 10.0
 #define POSE_UPDATE_RATE 20.0
 #define SEGMENT_NAME "torso"
-#define HUMAN_ID 1
 #define HUMANS_FRAME_ID "humans_frame"
 
 #include <ros/ros.h>
 #include <hanp_msgs/TrackedHumans.h>
-#include <visualization_msgs/Marker.h>
+#include <visualization_msgs/MarkerArray.h>
 #include <tf/transform_listener.h>
 
 #include <math.h>
@@ -51,78 +46,148 @@ int main(int argc, char **argv)
     // ros variables
     ros::NodeHandle nh("~");
     ros::Publisher humans_pub, vis_pub;
-    double start_pose_x, start_pose_y, end_pose_x, end_pose_y;
+    std::map<int, double> start_poses_x, start_poses_y, start_poses_theta, end_poses_x, end_poses_y, end_poses_theta;
 
-    // variables
-    bool publish_markers = false;
+    // other variables
+    bool publish_markers;
 
     // get parameters from server
     nh.param<bool>("publish_markers", publish_markers, false);
-    nh.param<double>("start_pose_x", start_pose_x, START_POSE_X);
-    nh.param<double>("start_pose_y", start_pose_y, START_POSE_Y);
-    nh.param<double>("end_pose_x", end_pose_x, END_POSE_X);
-    nh.param<double>("end_pose_y", end_pose_y, END_POSE_X);
+    XmlRpc::XmlRpcValue human_positions;
+    if(!nh.getParam("humans", human_positions))
+    {
+        ROS_ERROR("failed to read human positoins on param server");
+    }
+
+    // check and process human positions data
+    enum class PoseType : char { START = 1, END = 2, LAST = 3 };
+
+    std::map<int, std::map<PoseType, geometry_msgs::Pose>> humans_poses;
+    ROS_ASSERT(human_positions.getType()==XmlRpc::XmlRpcValue::TypeArray);
+    for (int i = 0; i < human_positions.size(); ++i)
+    {
+        ROS_ASSERT(human_positions[i].getType() == XmlRpc::XmlRpcValue::TypeStruct);
+
+        bool got_id = false, got_start = false, got_end = false;
+        int human_id;
+        double human_start_x, human_start_y, human_start_theta, human_end_x, human_end_y, human_end_theta;
+        for (XmlRpc::XmlRpcValue::iterator it = human_positions[i].begin(); it != human_positions[i].end(); ++it)
+        {
+            if(!it->first.compare("id"))
+            {
+                ROS_ASSERT(it->second.getType() == XmlRpc::XmlRpcValue::TypeInt);
+                human_id = (int)(it->second);
+                got_id = true;
+            }
+            else if(!it->first.compare("start"))
+            {
+                ROS_ASSERT(it->second.getType() == XmlRpc::XmlRpcValue::TypeArray);
+                ROS_ASSERT(it->second.size() == 3);
+                for (int32_t j = 0; j < it->second.size(); ++j)
+                {
+                    ROS_ASSERT(it->second[j].getType() == XmlRpc::XmlRpcValue::TypeDouble);
+                }
+                human_start_x = (double)(it->second[0]);
+                human_start_y = (double)(it->second[1]);
+                human_start_theta = (double)(it->second[2]);
+                got_start = true;
+            }
+            else if(!it->first.compare("end"))
+            {
+                ROS_ASSERT(it->second.getType() == XmlRpc::XmlRpcValue::TypeArray);
+                ROS_ASSERT(it->second.size() == 3);
+                for (int j = 0; j < it->second.size(); ++j)
+                {
+                    ROS_ASSERT(it->second[j].getType() == XmlRpc::XmlRpcValue::TypeDouble);
+                }
+                human_end_x = (double)(it->second[0]);
+                human_end_y = (double)(it->second[1]);
+                human_end_theta = (double)(it->second[2]);
+                got_end = true;
+            }
+            else
+            {
+                ROS_ERROR("Could not process %s identifier for human positions", ((std::string)(it->first)).c_str());
+                exit;
+            }
+        }
+
+        if(!got_id || !got_start || !got_end)
+        {
+            ROS_ERROR("Incomplete or wrong human position data");
+            exit;
+        }
+
+        geometry_msgs::Pose start_pose, end_pose;
+
+        start_pose.position.x = human_start_x;
+        start_pose.position.y = human_start_y;
+        start_pose.position.z = 0.0;
+        start_pose.orientation = tf::createQuaternionMsgFromYaw(human_start_theta);
+
+        end_pose.position.x = human_end_x;
+        end_pose.position.y = human_end_y;
+        end_pose.position.z = 0.0;
+        end_pose.orientation = tf::createQuaternionMsgFromYaw(human_end_theta);
+
+        std::map<PoseType, geometry_msgs::Pose> start_end_last_poses;
+        start_end_last_poses[PoseType::START] = start_pose;
+        start_end_last_poses[PoseType::END] = end_pose;
+        start_end_last_poses[PoseType::LAST] = start_pose;
+
+        humans_poses[human_id] = start_end_last_poses;
+    }
 
     humans_pub = nh.advertise<hanp_msgs::TrackedHumans>("humans", 1);
 
     if(publish_markers)
     {
-        vis_pub = nh.advertise<visualization_msgs::Marker>( "humans_marker", 0);
+        vis_pub = nh.advertise<visualization_msgs::MarkerArray>( "humans_markers", 0);
         ROS_DEBUG("will publish markers");
     }
 
     ros::Rate loop_rate(LOOP_RATE);
 
     // generate fake humans and markers
-    hanp_msgs::TrackedSegment tracked_segment;
-    tracked_segment.name = SEGMENT_NAME;
-
-    visualization_msgs::Marker human_marker;
-    geometry_msgs::Pose start_pose, end_pose, last_pose;
-
-    start_pose.position.x = start_pose_x;
-    start_pose.position.y = start_pose_y;
-    start_pose.position.z = 0.0;
-    start_pose.orientation.x = 0.0;
-    start_pose.orientation.y = 0.0;
-    start_pose.orientation.z = 0.0;
-    start_pose.orientation.w = 1.0;
-
-    last_pose = start_pose;
-
-    end_pose = start_pose;
-    end_pose.position.x = end_pose_x;
-    end_pose.position.y = end_pose_y;
-
-    double diff_x = end_pose.position.x - start_pose.position.x;
-    double diff_y = end_pose.position.y - start_pose.position.y;
-
-    // add human segment to human message
-    hanp_msgs::TrackedHuman human;
-    human.track_id = HUMAN_ID;
-    tracked_segment.pose.pose = start_pose;
-    human.segments.push_back(tracked_segment);
-
-    // add human to humans message to publish
     hanp_msgs::TrackedHumans tracks;
+    visualization_msgs::MarkerArray humans_markers;
+
     tracks.header.stamp = ros::Time::now();
     tracks.header.frame_id = HUMANS_FRAME_ID;
-    tracks.humans.push_back(human);
 
-    // add marker for the fake human for visualization
-    human_marker.header.stamp = tracks.header.stamp;
-    human_marker.header.frame_id = tracks.header.frame_id;
-    human_marker.type = visualization_msgs::Marker::ARROW;
-    human_marker.action = visualization_msgs::Marker::MODIFY;
-    human_marker.id = human.track_id;
-    human_marker.pose = tracked_segment.pose.pose;
-    human_marker.scale.x = 0.5;
-    human_marker.scale.y = 0.08;
-    human_marker.scale.z = 0.08;
-    human_marker.color.a = 1.0;
-    human_marker.color.r = 0.5;
-    human_marker.color.g = 0.5;
-    human_marker.color.b = 0.0;
+    std::map<int, double> diff_xs, diff_ys, diff_thetas;
+    for(auto human_poses : humans_poses)
+    {
+        diff_xs[human_poses.first] = human_poses.second[PoseType::END].position.x - human_poses.second[PoseType::START].position.x;
+        diff_ys[human_poses.first] = human_poses.second[PoseType::END].position.y - human_poses.second[PoseType::START].position.y;
+        diff_thetas[human_poses.first] = tf::getYaw(human_poses.second[PoseType::END].orientation) - tf::getYaw(human_poses.second[PoseType::START].orientation);
+
+        hanp_msgs::TrackedSegment tracked_segment;
+        tracked_segment.name = SEGMENT_NAME;
+        tracked_segment.pose.pose = human_poses.second[PoseType::START];
+
+        hanp_msgs::TrackedHuman human;
+        human.track_id = human_poses.first;
+        human.segments.push_back(tracked_segment);
+
+        tracks.humans.push_back(human);
+
+        visualization_msgs::Marker human_marker;
+        human_marker.header.stamp = tracks.header.stamp;
+        human_marker.header.frame_id = tracks.header.frame_id;
+        human_marker.type = visualization_msgs::Marker::ARROW;
+        human_marker.action = visualization_msgs::Marker::MODIFY;
+        human_marker.id = human.track_id;
+        human_marker.pose = tracked_segment.pose.pose;
+        human_marker.scale.x = 0.5;
+        human_marker.scale.y = 0.08;
+        human_marker.scale.z = 0.08;
+        human_marker.color.a = 1.0;
+        human_marker.color.r = 0.5;
+        human_marker.color.g = 0.5;
+        human_marker.color.b = 0.0;
+        humans_markers.markers.push_back(human_marker);
+    }
 
     double angle = 0;
     while (ros::ok())
@@ -130,37 +195,52 @@ int main(int argc, char **argv)
         // change human pose by simple sin-wave based interpolation
         double interpolation = (sin(angle) + 1) / 2;
 
-        for(auto &segment : human.segments)
+        tracks.header.stamp = ros::Time::now();
+        for(auto &human : tracks.humans)
         {
-            if(segment.name == SEGMENT_NAME)
+            for(auto &segment : human.segments)
             {
-                segment.pose.pose.position.x = start_pose.position.x + diff_x * interpolation;
-                segment.pose.pose.position.y = start_pose.position.y + diff_y * interpolation;
-
-                double dx = segment.pose.pose.position.x - last_pose.position.x;
-                double dy = segment.pose.pose.position.y - last_pose.position.y;
-                segment.pose.pose.orientation = tf::createQuaternionMsgFromYaw(atan2(dy, dx));
-
-                segment.twist.twist.linear.x = dx / (1.0/LOOP_RATE);
-                segment.twist.twist.linear.y = dy / (1.0/LOOP_RATE);
-                segment.twist.twist.angular.z = (tf::getYaw(segment.pose.pose.orientation) -
-                    tf::getYaw(last_pose.orientation)) / (1.0/LOOP_RATE);
-
-                // modify messages to publish
-                tracks.header.stamp = ros::Time::now();
-                tracks.humans.clear();
-                tracks.humans.push_back(human);
-
-                humans_pub.publish(tracks);
-
-                if(publish_markers)
+                if(segment.name == SEGMENT_NAME)
                 {
-                    human_marker.pose = segment.pose.pose;
-                    vis_pub.publish(human_marker);
-                }
+                    segment.pose.pose.position.x = humans_poses[human.track_id][PoseType::START].position.x
+                        + diff_xs[human.track_id] * interpolation;
+                    segment.pose.pose.position.y = humans_poses[human.track_id][PoseType::START].position.y
+                        + diff_ys[human.track_id] * interpolation;
+                    //TODO: update orientation properly
 
-                last_pose = segment.pose.pose;
+                    double dx = segment.pose.pose.position.x - humans_poses[human.track_id][PoseType::LAST].position.x;
+                    double dy = segment.pose.pose.position.y - humans_poses[human.track_id][PoseType::LAST].position.y;
+                    segment.pose.pose.orientation = tf::createQuaternionMsgFromYaw(atan2(dy, dx));
+
+                    segment.twist.twist.linear.x = dx / (1.0/LOOP_RATE);
+                    segment.twist.twist.linear.y = dy / (1.0/LOOP_RATE);
+                    segment.twist.twist.angular.z = (tf::getYaw(segment.pose.pose.orientation) -
+                        tf::getYaw(humans_poses[human.track_id][PoseType::LAST].orientation)) / (1.0/LOOP_RATE);
+
+                    humans_poses[human.track_id][PoseType::LAST] = segment.pose.pose;
+
+                    ROS_DEBUG("updated human %lu, x=%f, y=%f, theta=%f", human.track_id,
+                        segment.pose.pose.position.x, segment.pose.pose.position.y,
+                        tf::getYaw(segment.pose.pose.orientation));
+
+                    if(publish_markers)
+                    {
+                        for(auto &human_marker : humans_markers.markers)
+                        {
+                            if(human_marker.id == human.track_id)
+                            {
+                                human_marker.pose = segment.pose.pose;
+                            }
+                        }
+                    }
+                }
             }
+        }
+
+        humans_pub.publish(tracks);
+        if(publish_markers)
+        {
+            vis_pub.publish(humans_markers);
         }
 
         ros::spinOnce();
