@@ -29,11 +29,14 @@
 
 #define LOOP_RATE 10.0
 #define POSE_UPDATE_RATE 20.0
-#define SEGMENT_NAME "torso"
+#define SEGMENT_TYPE hanp_msgs::TrackedSegmentType::TORSO
 #define HUMANS_FRAME_ID "humans_frame"
+#define PUBLISH_MARKERS false
+#define RELATIVE_ORIENTATION true
 
 #include <ros/ros.h>
 #include <hanp_msgs/TrackedHumans.h>
+#include <hanp_msgs/TrackedSegmentType.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <tf/transform_listener.h>
 
@@ -49,10 +52,11 @@ int main(int argc, char **argv)
     std::map<int, double> start_poses_x, start_poses_y, start_poses_theta, end_poses_x, end_poses_y, end_poses_theta;
 
     // other variables
-    bool publish_markers;
+    bool publish_markers, relative_orientation;
 
     // get parameters from server
-    nh.param<bool>("publish_markers", publish_markers, false);
+    nh.param<bool>("publish_markers", publish_markers, PUBLISH_MARKERS);
+    nh.param<bool>("relative_orientation", relative_orientation, RELATIVE_ORIENTATION);
     XmlRpc::XmlRpcValue human_positions;
     if(!nh.getParam("humans", human_positions))
     {
@@ -71,6 +75,7 @@ int main(int argc, char **argv)
         bool got_id = false, got_start = false, got_end = false;
         int human_id;
         double human_start_x, human_start_y, human_start_theta, human_end_x, human_end_y, human_end_theta;
+
         for (XmlRpc::XmlRpcValue::iterator it = human_positions[i].begin(); it != human_positions[i].end(); ++it)
         {
             if(!it->first.compare("id"))
@@ -107,14 +112,14 @@ int main(int argc, char **argv)
             }
             else
             {
-                ROS_ERROR("Could not process %s identifier for human positions", ((std::string)(it->first)).c_str());
+                ROS_ERROR("could not process %s identifier for human positions", ((std::string)(it->first)).c_str());
                 exit;
             }
         }
 
         if(!got_id || !got_start || !got_end)
         {
-            ROS_ERROR("Incomplete or wrong human position data");
+            ROS_ERROR("incomplete or wrong human position data");
             exit;
         }
 
@@ -163,7 +168,7 @@ int main(int argc, char **argv)
         diff_thetas[human_poses.first] = tf::getYaw(human_poses.second[PoseType::END].orientation) - tf::getYaw(human_poses.second[PoseType::START].orientation);
 
         hanp_msgs::TrackedSegment tracked_segment;
-        tracked_segment.name = SEGMENT_NAME;
+        tracked_segment.type = SEGMENT_TYPE;
         tracked_segment.pose.pose = human_poses.second[PoseType::START];
 
         hanp_msgs::TrackedHuman human;
@@ -200,22 +205,34 @@ int main(int argc, char **argv)
         {
             for(auto &segment : human.segments)
             {
-                if(segment.name == SEGMENT_NAME)
+                if(segment.type == SEGMENT_TYPE)
                 {
                     segment.pose.pose.position.x = humans_poses[human.track_id][PoseType::START].position.x
                         + diff_xs[human.track_id] * interpolation;
                     segment.pose.pose.position.y = humans_poses[human.track_id][PoseType::START].position.y
                         + diff_ys[human.track_id] * interpolation;
-                    //TODO: update orientation properly
 
                     double dx = segment.pose.pose.position.x - humans_poses[human.track_id][PoseType::LAST].position.x;
                     double dy = segment.pose.pose.position.y - humans_poses[human.track_id][PoseType::LAST].position.y;
-                    segment.pose.pose.orientation = tf::createQuaternionMsgFromYaw(atan2(dy, dx));
 
                     segment.twist.twist.linear.x = dx / (1.0/LOOP_RATE);
                     segment.twist.twist.linear.y = dy / (1.0/LOOP_RATE);
-                    segment.twist.twist.angular.z = (tf::getYaw(segment.pose.pose.orientation) -
-                        tf::getYaw(humans_poses[human.track_id][PoseType::LAST].orientation)) / (1.0/LOOP_RATE);
+
+                    if(relative_orientation)
+                    {
+                        segment.pose.pose.orientation = tf::createQuaternionMsgFromYaw(atan2(dy, dx));
+                        segment.twist.twist.angular.z = (tf::getYaw(segment.pose.pose.orientation) -
+                            tf::getYaw(humans_poses[human.track_id][PoseType::LAST].orientation)) / (1.0/LOOP_RATE);
+                    }
+                    else
+                    {
+                        segment.pose.pose.orientation = tf::createQuaternionMsgFromYaw(
+                            tf::getYaw(humans_poses[human.track_id][PoseType::START].orientation)
+                            + diff_thetas[human.track_id] * interpolation);
+
+                        double dtheta = tf::getYaw(segment.pose.pose.orientation) - tf::getYaw(humans_poses[human.track_id][PoseType::LAST].orientation);
+                        segment.twist.twist.angular.z = dtheta / (1.0/LOOP_RATE);
+                    }
 
                     humans_poses[human.track_id][PoseType::LAST] = segment.pose.pose;
 
