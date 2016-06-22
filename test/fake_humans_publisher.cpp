@@ -33,6 +33,7 @@
 #define HUMANS_FRAME_ID "humans_frame"
 #define PUBLISH_MARKERS false
 #define RELATIVE_ORIENTATION true
+#define MARKER_LIFETIME 4.0
 
 #include <ros/ros.h>
 #include <hanp_msgs/TrackedHumans.h>
@@ -191,6 +192,7 @@ int main(int argc, char **argv)
         human_marker.color.r = 0.5;
         human_marker.color.g = 0.5;
         human_marker.color.b = 0.0;
+        human_marker.lifetime = ros::Duration(MARKER_LIFETIME);
         humans_markers.markers.push_back(human_marker);
     }
 
