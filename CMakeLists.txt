@@ -7,6 +7,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   message_generation
   geometry_msgs
+  nav_msgs
   tf
   visualization_msgs
 )
@@ -15,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 add_message_files( DIRECTORY msg
   FILES
+    PathArray.msg
     TrackedSegment.msg
     TrackedHuman.msg
     TrackedHumans.msg
@@ -25,6 +27,7 @@ add_message_files( DIRECTORY msg
 generate_messages(
   DEPENDENCIES
     geometry_msgs
+    nav_msgs
 )
 
 ## declare catkin package
@@ -33,6 +36,7 @@ catkin_package(
     roscpp
     message_runtime
     geometry_msgs
+    nav_msgs
     tf
     visualization_msgs
 )
