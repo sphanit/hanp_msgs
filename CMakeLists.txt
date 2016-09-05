@@ -21,6 +21,8 @@ add_message_files( DIRECTORY msg
     TrackedHuman.msg
     TrackedHumans.msg
     TrackedSegmentType.msg
+    Trajectory.msg
+    TrajectoryArray.msg
 )
 
 ## generate added messages and services with any dependencies listed here
