@@ -23,6 +23,7 @@ add_message_files( DIRECTORY msg
     TrackedSegmentType.msg
     Trajectory.msg
     TrajectoryArray.msg
+    TrajectoryPoint.msg
 )
 
 ## generate added messages and services with any dependencies listed here
