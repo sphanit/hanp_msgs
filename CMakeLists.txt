@@ -16,9 +16,13 @@ find_package(catkin REQUIRED COMPONENTS
 
 add_message_files( DIRECTORY msg
   FILES
-    PathArray.msg
+    HumanPath.msg
+    HumanPathArray.msg
+    HumanTrajectory.msg
+    HumanTrajectoryArray.msg
     TrackedSegment.msg
     TrackedHuman.msg
+    TrackedHumanArray.msg
     TrackedHumans.msg
     TrackedSegmentType.msg
     Trajectory.msg
