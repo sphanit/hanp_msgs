@@ -20,6 +20,8 @@ add_message_files( DIRECTORY msg
     HumanPathArray.msg
     HumanTrajectory.msg
     HumanTrajectoryArray.msg
+    HumanTwist.msg
+    HumanTwistArray.msg
     TrackedSegment.msg
     TrackedHuman.msg
     TrackedHumanArray.msg
