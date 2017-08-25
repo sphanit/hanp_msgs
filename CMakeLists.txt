@@ -18,10 +18,13 @@ add_message_files( DIRECTORY msg
   FILES
     HumanPath.msg
     HumanPathArray.msg
+    HumanTimeToGoal.msg
+    HumanTimeToGoalArray.msg
     HumanTrajectory.msg
     HumanTrajectoryArray.msg
     HumanTwist.msg
     HumanTwistArray.msg
+    TimeToGoal.msg
     TrackedSegment.msg
     TrackedHuman.msg
     TrackedHumanArray.msg
