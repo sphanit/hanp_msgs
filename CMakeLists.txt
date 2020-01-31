@@ -33,6 +33,8 @@ add_message_files( DIRECTORY msg
     Trajectory.msg
     TrajectoryArray.msg
     TrajectoryPoint.msg
+    TrajectoryPointMsg.msg
+    TrajectoryMsg.msg
 )
 
 ## generate added messages and services with any dependencies listed here
@@ -40,6 +42,7 @@ generate_messages(
   DEPENDENCIES
     geometry_msgs
     nav_msgs
+    std_msgs
 )
 
 ## declare catkin package
