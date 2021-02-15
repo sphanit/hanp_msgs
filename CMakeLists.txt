@@ -35,6 +35,7 @@ add_message_files( DIRECTORY msg
     TrajectoryPoint.msg
     TrajectoryPointMsg.msg
     TrajectoryMsg.msg
+    StateArray.msg
 )
 
 ## generate added messages and services with any dependencies listed here
